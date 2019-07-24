@@ -62,6 +62,9 @@ class CPU:
 
         print()
 
+    def hlt(self):
+        sys.exit()
+
     def ram_read(self, mar):
         return self.ram[mar]
 
