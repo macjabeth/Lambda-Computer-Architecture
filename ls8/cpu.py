@@ -65,6 +65,9 @@ class CPU:
     def hlt(self):
         sys.exit()
 
+    def ldi(self, register, value):
+        self.reg[register] = value
+
     def ram_read(self, mar):
         return self.ram[mar]
 
