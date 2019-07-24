@@ -68,6 +68,9 @@ class CPU:
     def ldi(self, register, value):
         self.reg[register] = value
 
+    def prn(self, register):
+        print(self.reg[register])
+
     def ram_read(self, mar):
         return self.ram[mar]
 
