@@ -8,9 +8,17 @@ class CPU:
     def __init__(self, program):
         """Construct a new CPU."""
         self.program = program
+        self.branchtable = {}
+        self.setup_branchtable()
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+
+    def setup_branchtable(self):
+        self.branchtable[0b10000010] = self.ldi
+        self.branchtable[0b10100010] = self.alu
+        self.branchtable[0b01000111] = self.prn
+        self.branchtable[0b00000001] = self.hlt
 
     def load(self):
         """Load a program into memory."""
@@ -30,6 +38,8 @@ class CPU:
             self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
+
+        self.pc += 3
 
     def trace(self):
         """
@@ -56,9 +66,11 @@ class CPU:
 
     def ldi(self, register, value):
         self.reg[register] = value
+        self.pc += 3
 
     def prn(self, register):
         print(self.reg[register])
+        self.pc += 2
 
     def ram_read(self, mar):
         return self.ram[mar]
@@ -72,18 +84,17 @@ class CPU:
             IR = self.ram_read(self.pc)
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
-            step = 1
 
-            if IR == 0b00000001:
-                self.hlt()
-            elif IR == 0b10000010:
-                self.ldi(operand_a, operand_b)
-                step += 2
-            elif IR == 0b01000111:
-                self.prn(operand_a)
-                step += 1
-            elif IR == 0b10100010:
-                self.alu('MUL', operand_a, operand_b)
-                step += 2
+            if self.branchtable.get(IR):
+                args = []
 
-            self.pc += step
+                if IR == 0b10000010:
+                    args = [operand_a, operand_b]
+                elif IR == 0b01000111:
+                    args = [operand_a]
+                elif IR == 0b10100010:
+                    args = ['MUL', operand_a, operand_b]
+
+                self.branchtable[IR](*args)
+            else:
+                print('Unknown instruction:', IR)
