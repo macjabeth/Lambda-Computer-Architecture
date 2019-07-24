@@ -12,12 +12,15 @@ class CPU:
         self.setup_branchtable()
         self.ram = [0] * 256
         self.reg = [0] * 8
+        self.sp = 0xF4
         self.pc = 0
 
     def setup_branchtable(self):
         self.branchtable[0b10000010] = self.ldi
-        self.branchtable[0b10100010] = self.alu
+        self.branchtable[0b10100010] = self.mul
         self.branchtable[0b01000111] = self.prn
+        self.branchtable[0b01000101] = self.push
+        self.branchtable[0b01000110] = self.pop
         self.branchtable[0b00000001] = self.hlt
 
     def load(self):
@@ -39,8 +42,6 @@ class CPU:
         else:
             raise Exception("Unsupported ALU operation")
 
-        self.pc += 3
-
     def trace(self):
         """
         Handy function to print out the CPU state. You might want to call this
@@ -49,8 +50,8 @@ class CPU:
 
         print(f"TRACE: %02X | %02X %02X %02X |" % (
             self.pc,
-            #self.fl,
-            #self.ie,
+            # self.fl,
+            # self.ie,
             self.ram_read(self.pc),
             self.ram_read(self.pc + 1),
             self.ram_read(self.pc + 2)
@@ -66,11 +67,12 @@ class CPU:
 
     def ldi(self, register, value):
         self.reg[register] = value
-        self.pc += 3
 
     def prn(self, register):
         print(self.reg[register])
-        self.pc += 2
+
+    def mul(self, regA, regB):
+        self.alu('MUL', regA, regB)
 
     def ram_read(self, mar):
         return self.ram[mar]
@@ -78,22 +80,34 @@ class CPU:
     def ram_write(self, mar, mdr):
         self.ram[mar] = mdr
 
+    def push(self, reg):
+        self.sp -= 1
+        self.ram_write(self.sp, self.reg[reg])
+
+    def pop(self, reg):
+        self.reg[reg] = self.ram_read(self.sp)
+        self.sp += 1
+
     def run(self):
         """Run the CPU."""
+        one_op = set({0b01000111, 0b01000101, 0b01000110})
+        two_op = set({0b10000010, 0b10100010})
+
         while True:
             IR = self.ram_read(self.pc)
+
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
 
             if self.branchtable.get(IR):
                 args = []
 
-                if IR == 0b10000010:
-                    args = [operand_a, operand_b]
-                elif IR == 0b01000111:
+                if IR in one_op:
                     args = [operand_a]
-                elif IR == 0b10100010:
-                    args = ['MUL', operand_a, operand_b]
+                    self.pc += 2
+                elif IR in two_op:
+                    args = [operand_a, operand_b]
+                    self.pc += 3
 
                 self.branchtable[IR](*args)
             else:
