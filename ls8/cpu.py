@@ -19,6 +19,10 @@ class CPU:
         self.branchtable[0b10000010] = self.ldi
         self.branchtable[0b10100000] = self.add
         self.branchtable[0b10100010] = self.mul
+        self.branchtable[0b10100011] = self.div
+        self.branchtable[0b10101000] = self.bwand
+        self.branchtable[0b01100101] = self.inc
+        self.branchtable[0b01100110] = self.dec
         self.branchtable[0b01000111] = self.prn
         self.branchtable[0b01000101] = self.push
         self.branchtable[0b01000110] = self.pop
@@ -40,8 +44,14 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "DIV":
+            self.reg[reg_a] /= self.reg[reg_b]
+        elif op == "AND":
+            self.reg[reg_a] &= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -74,11 +84,26 @@ class CPU:
     def prn(self, register):
         print(self.reg[register])
 
-    def add(self, regA, regB):
-        self.alu('ADD', regA, regB)
+    def add(self, reg_a, reg_b):
+        self.alu('ADD', reg_a, reg_b)
 
-    def mul(self, regA, regB):
-        self.alu('MUL', regA, regB)
+    def sub(self, reg_a, reg_b):
+        self.alu('SUB', reg_a, reg_b)
+
+    def mul(self, reg_a, reg_b):
+        self.alu('MUL', reg_a, reg_b)
+
+    def div(self, reg_a, reg_b):
+        self.alu('DIV', reg_a, reg_b)
+
+    def bwand(self, reg_a, reg_b):
+        self.alu('AND', reg_a, reg_b)
+
+    def inc(self, reg):
+        self.alu('ADD', reg, 1)
+
+    def dec(self, reg):
+        self.alu('SUB', reg, 1)
 
     def ram_read(self, mar):
         return self.ram[mar]
@@ -103,10 +128,21 @@ class CPU:
         self.pc = self.ram_read(self.sp)
         self.sp += 1
 
+    def store(self, reg_a, reg_b):
+        address = self.ram_read(reg_a)
+        value = self.ram_read(reg_b)
+        self.ram_write(address, value)
+
     def run(self):
         """Run the CPU."""
-        one_op = set({0b01000111, 0b01000101, 0b01000110, 0b01010000})
-        two_op = set({0b10000010, 0b10100010, 0b10100000})
+        one_op = set({
+            0b01000111, 0b01000101, 0b01000110, 0b01010000, 0b01100101,
+            0b01100110
+        })
+
+        two_op = set({
+            0b10000010, 0b10100010, 0b10100000, 0b10101000, 0b10100011
+        })
 
         while True:
             IR = self.ram_read(self.pc)
