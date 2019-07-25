@@ -17,10 +17,13 @@ class CPU:
 
     def setup_branchtable(self):
         self.branchtable[0b10000010] = self.ldi
+        self.branchtable[0b10100000] = self.add
         self.branchtable[0b10100010] = self.mul
         self.branchtable[0b01000111] = self.prn
         self.branchtable[0b01000101] = self.push
         self.branchtable[0b01000110] = self.pop
+        self.branchtable[0b01010000] = self.call
+        self.branchtable[0b00010001] = self.ret
         self.branchtable[0b00000001] = self.hlt
 
     def load(self):
@@ -71,6 +74,9 @@ class CPU:
     def prn(self, register):
         print(self.reg[register])
 
+    def add(self, regA, regB):
+        self.alu('ADD', regA, regB)
+
     def mul(self, regA, regB):
         self.alu('MUL', regA, regB)
 
@@ -88,10 +94,19 @@ class CPU:
         self.reg[reg] = self.ram_read(self.sp)
         self.sp += 1
 
+    def call(self, reg):
+        self.sp -= 1
+        self.ram_write(self.sp, self.pc)
+        self.pc = self.reg[reg]
+
+    def ret(self):
+        self.pc = self.ram_read(self.sp)
+        self.sp += 1
+
     def run(self):
         """Run the CPU."""
-        one_op = set({0b01000111, 0b01000101, 0b01000110})
-        two_op = set({0b10000010, 0b10100010})
+        one_op = set({0b01000111, 0b01000101, 0b01000110, 0b01010000})
+        two_op = set({0b10000010, 0b10100010, 0b10100000})
 
         while True:
             IR = self.ram_read(self.pc)
